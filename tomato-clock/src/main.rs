@@ -7,10 +7,12 @@ use iced::window;
 use iced::{Alignment, Application, Command, Element, Length, Settings, Subscription};
 use notify_rust::Notification;
 
+use std::fmt;
 use std::time::{Duration, Instant};
 
 const WORK_DURATION: Duration = Duration::from_secs(1500);
 const BREAK_DURATION: Duration = Duration::from_secs(300);
+const INTERVAL: Duration = Duration::from_secs(10);
 
 pub fn main() -> iced::Result {
     TomatoClock::run(Settings {
@@ -29,14 +31,51 @@ struct TomatoClock {
     clock_type: ClockType,
 }
 
+impl TomatoClock {
+    fn next(&mut self) {
+        self.duration = match self.clock_type {
+            ClockType::Work => {
+                self.clock_type = ClockType::WorkInterval;
+                INTERVAL
+            }
+            ClockType::Break => {
+                self.clock_type = ClockType::BreakInterval;
+                INTERVAL
+            }
+            ClockType::WorkInterval => {
+                self.clock_type = ClockType::Break;
+                BREAK_DURATION
+            }
+            ClockType::BreakInterval => {
+                self.clock_type = ClockType::Work;
+                WORK_DURATION
+            }
+        };
+    }
+}
+
 enum State {
     Idle,
     Ticking { last_tick: Instant },
 }
 
+#[derive(Clone)]
 enum ClockType {
     Work,
     Break,
+    WorkInterval,
+    BreakInterval,
+}
+
+impl fmt::Display for ClockType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let result = match self {
+            Self::Work => "Working",
+            Self::Break => "Breaking",
+            _ => "Interval",
+        };
+        write!(f, "{}", result)
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -83,19 +122,11 @@ impl Application for TomatoClock {
                 if let State::Ticking { last_tick } = &mut self.state {
                     let duration = now - *last_tick;
                     if self.duration <= duration {
-                        self.duration = match self.clock_type {
-                            ClockType::Work => {
-                                self.clock_type = ClockType::Break;
-                                BREAK_DURATION
-                            }
-                            ClockType::Break => {
-                                self.clock_type = ClockType::Work;
-                                WORK_DURATION
-                            }
-                        };
+                        let last_clock_type = self.clock_type.clone();
+                        self.next();
                         Notification::new()
                             .summary("TomatoClock")
-                            .body("Your timer is done!")
+                            .body(format!("Your [{}] timer is done!", last_clock_type).as_str())
                             .icon("firefox")
                             .show()
                             .ok();
@@ -156,10 +187,7 @@ impl Application for TomatoClock {
 
         let controls = row![toggle_button, reset_button].spacing(20);
 
-        let status = text(match self.clock_type {
-            ClockType::Work => "Working",
-            ClockType::Break => "Breaking",
-        });
+        let status = text(&self.clock_type);
 
         let content = column![duration, controls, status]
             .align_items(Alignment::Center)
