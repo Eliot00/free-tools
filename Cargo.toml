@@ -1,5 +1,6 @@
 [workspace]
 members = [
     "tomato-clock",
+    "clipman",
 ]
 resolver = "2"
