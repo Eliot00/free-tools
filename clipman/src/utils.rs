@@ -1,6 +1,6 @@
 use std::collections::VecDeque;
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct ClipboardHistory<const N: usize> {
     deque: VecDeque<String>,
     cursor: usize,
