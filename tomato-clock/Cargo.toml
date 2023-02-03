@@ -9,5 +9,5 @@ identifier = "com.elliot00.tomato-clock"
 category = "Utility"
 
 [dependencies]
-iced = { version = "0.5", features = ["canvas", "tokio", "debug"] }
+iced = { version = "0.7", features = ["canvas", "tokio"] }
 notify-rust = "4"
